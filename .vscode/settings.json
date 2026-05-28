@@ -1,4 +1,9 @@
 {
   "python.defaultInterpreterPath": "${workspaceFolder}/.venv/bin/python",
-  "python.terminal.activateEnvironment": true
+  "python.terminal.activateEnvironment": true,
+  "python.analysis.ignore": ["**/mediapipe/**"],
+      "python.analysis.diagnosticSeverityOverrides": {
+          "reportAttributeAccessIssue": "none",
+          "reportUndefinedVariable": "none"
+      }
 }
