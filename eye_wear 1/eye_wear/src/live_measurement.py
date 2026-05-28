@@ -1,10 +1,25 @@
 import cv2
 import mediapipe as mp
+from mediapipe.tasks import python
+from mediapipe.tasks.python import vision
+
 import numpy as np
 import os
 
-# ------------------ INIT ------------------
-mp_face_mesh = mp.solutions.face_mesh  
+# Get the path to face_landmarker.task
+task_path = os.path.join(os.path.dirname(__file__), "face_landmarker.task")
+
+# Create face landmarker options
+base_options = python.BaseOptions(model_asset_path=task_path)
+options = vision.FaceLandmarkerOptions(
+    base_options=base_options,
+    num_faces=1,
+    output_face_blendshapes=True,
+    output_facial_transformation_matrixes=True
+)
+
+# Create face landmarker
+face_landmarker = vision.FaceLandmarker.create_from_options(options)
 
 # ------------------ LANDMARK IDS ------------------
 LEFT_EYE = [33, 133]
@@ -17,10 +32,6 @@ NOSE_BRIDGE = [94, 331]
 # ------------------ UTILS ------------------
 def distance(p1, p2):
     return np.linalg.norm(np.array(p1) - np.array(p2))
-
-def get_point(landmarks, idx, w, h):
-    lm = landmarks[idx]
-    return int(lm.x * w), int(lm.y * h)
 
 
 def open_camera():
@@ -59,31 +70,37 @@ def draw_overlay(frame, measurements_mm, status_message):
         y += 28
 
 
-def measure_frame(frame, face_mesh):
+def measure_frame(frame, face_landmarker):
     h, w, _ = frame.shape
     rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-    result = face_mesh.process(rgb)
+    mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb)
+    
+    result = face_landmarker.detect(mp_image)
 
-    if not result.multi_face_landmarks:
+    if not result.face_landmarks:
         return None
 
-    landmarks = result.multi_face_landmarks[0].landmark
+    landmarks = result.face_landmarks[0]
 
-    left_pupil = get_point(landmarks, LEFT_PUPIL, w, h)
-    right_pupil = get_point(landmarks, RIGHT_PUPIL, w, h)
-    face_left = get_point(landmarks, FACE_WIDTH[0], w, h)
-    face_right = get_point(landmarks, FACE_WIDTH[1], w, h)
-    nose_left = get_point(landmarks, NOSE_BRIDGE[0], w, h)
-    nose_right = get_point(landmarks, NOSE_BRIDGE[1], w, h)
+    def get_point(landmark_list, idx):
+        lm = landmark_list[idx]
+        return int(lm.x * w), int(lm.y * h)
+
+    left_pupil = get_point(landmarks, LEFT_PUPIL)
+    right_pupil = get_point(landmarks, RIGHT_PUPIL)
+    face_left = get_point(landmarks, FACE_WIDTH[0])
+    face_right = get_point(landmarks, FACE_WIDTH[1])
+    nose_left = get_point(landmarks, NOSE_BRIDGE[0])
+    nose_right = get_point(landmarks, NOSE_BRIDGE[1])
 
     left_eye_w = distance(
-        get_point(landmarks, LEFT_EYE[0], w, h),
-        get_point(landmarks, LEFT_EYE[1], w, h)
+        get_point(landmarks, LEFT_EYE[0]),
+        get_point(landmarks, LEFT_EYE[1])
     )
 
     right_eye_w = distance(
-        get_point(landmarks, RIGHT_EYE[0], w, h),
-        get_point(landmarks, RIGHT_EYE[1], w, h)
+        get_point(landmarks, RIGHT_EYE[0]),
+        get_point(landmarks, RIGHT_EYE[1])
     )
 
     pd_px = distance(left_pupil, right_pupil)
@@ -126,32 +143,31 @@ final_measurements_mm = {}
 # Average PD for scaling
 REFERENCE_PD_MM = 63.0  # mm
 
-with mp_face_mesh.FaceMesh(static_image_mode=False, max_num_faces=1, refine_landmarks=True) as face_mesh:
-    while cap.isOpened():
-        ret, frame = cap.read()
-        if not ret:
-            break
+while cap.isOpened():
+    ret, frame = cap.read()
+    if not ret:
+        break
 
-        frame = cv2.flip(frame, 1)
-        measurements = measure_frame(frame, face_mesh)
+    frame = cv2.flip(frame, 1)
+    measurements = measure_frame(frame, face_landmarker)
 
-        if measurements:
-            final_measurements_mm = {k: v for k, v in measurements.items() if k != "Points"}
-            points = measurements["Points"]
+    if measurements:
+        final_measurements_mm = {k: v for k, v in measurements.items() if k != "Points"}
+        points = measurements["Points"]
 
-            cv2.line(frame, points["left_pupil"], points["right_pupil"], (0, 255, 0), 2)
-            cv2.line(frame, points["face_left"], points["face_right"], (255, 0, 0), 2)
-            cv2.line(frame, points["nose_left"], points["nose_right"], (0, 0, 255), 2)
+        cv2.line(frame, points["left_pupil"], points["right_pupil"], (0, 255, 0), 2)
+        cv2.line(frame, points["face_left"], points["face_right"], (255, 0, 0), 2)
+        cv2.line(frame, points["nose_left"], points["nose_right"], (0, 0, 255), 2)
 
-            status_message = "Face detected. Press Q to quit."
-        else:
-            status_message = "Align your face in the camera view."
+        status_message = "Face detected. Press Q to quit."
+    else:
+        status_message = "Align your face in the camera view."
 
-        draw_overlay(frame, final_measurements_mm, status_message)
-        cv2.imshow("Live Face Measurement (mm)", frame)
+    draw_overlay(frame, final_measurements_mm, status_message)
+    cv2.imshow("Live Face Measurement (mm)", frame)
 
-        if cv2.waitKey(1) & 0xFF == ord("q"):
-            break
+    if cv2.waitKey(1) & 0xFF == ord("q"):
+        break
 
 cap.release()
 cv2.destroyAllWindows()
