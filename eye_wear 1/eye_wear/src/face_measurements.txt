@@ -1,0 +1,35 @@
+============================================================
+FACE MEASUREMENTS REPORT
+============================================================
+
+CURRENT MEASUREMENTS (MM)
+------------------------------------------------------------
+Pupillary Distance (mm): 63.0
+Face Width (mm): 412.36
+Bridge Width (mm): 34.92
+Left Lens Width (mm): 95.76
+Right Lens Width (mm): 44.78
+Nose Bridge & Groove (mm): 118.69
+Left Temporal Height (mm): 249.95
+Right Temporal Height (mm): 95.48
+Left Tear to Rear (mm): 295.22
+Right Tear to Rear (mm): 211.2
+
+------------------------------------------------------------
+AVERAGED MEASUREMENTS (PER SECOND, MM)
+------------------------------------------------------------
+Pupillary Distance (mm): 63.0
+Face Width (mm): 160.52
+Bridge Width (mm): 14.33
+Left Lens Width (mm): 40.57
+Right Lens Width (mm): 19.02
+Nose Bridge & Groove (mm): 51.39
+Left Temporal Height (mm): 108.86
+Right Temporal Height (mm): 46.26
+Left Tear to Rear (mm): 119.68
+Right Tear to Rear (mm): 86.28
+
+============================================================
+Timestamp: 2026-06-02 23:50:29
+Stability Status: Stable
+============================================================
